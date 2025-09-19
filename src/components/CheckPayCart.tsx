@@ -14,6 +14,13 @@ type CartItem = {
     deliveryTags?: string[];
 };
 
+type Address = {
+    id: string;
+    fullName: string;
+    phone: string;
+    addressText: string;
+};
+
 type CheckoutSummary = {
     subtotal: number;
     shipping: number;
@@ -63,8 +70,27 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
     const [discountCode, setDiscountCode] = useState('');
     const [showChat, setShowChat] = useState(false);
 
+    // Mock address data for non-guest users
+    const savedAddresses: Address[] = [
+        {
+            id: '1',
+            fullName: 'علی محمدی',
+            phone: '09123456789',
+            addressText: 'تهران، خیابان آزادی، کوچه بهار، پلاک ۱۲',
+        },
+        {
+            id: '2',
+            fullName: 'زهرا احمدی',
+            phone: '09351234567',
+            addressText: 'تهران، خیابان ولیعصر، کوچه گلستان، پلاک ۵',
+        },
+    ];
+
     const updateQty = (id: string, delta: number) => {
         setItems(prev => prev.map(it => (it.id === id ? { ...it, qty: Math.max(1, it.qty + delta) } : it)));
+    };
+    const selectAddress = (selectedAddress: Address) => {
+        setAddress(selectedAddress);
     };
 
     const subtotal = items.reduce((s, it) => s + it.price * it.qty - (it.discount || 0), 0);
@@ -139,11 +165,14 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
                         <input
                             type="checkbox"
                             checked={isGuest}
-                            onChange={() => setIsGuest(!isGuest)}
+                            onChange={() => {
+                                setIsGuest(!isGuest);
+                                setAddress({ fullName: '', phone: '', addressText: '', id: '' })
+                            }}
                         />
                         <span>خرید به عنوان مهمان</span>
                     </label>
-                    {isGuest && (
+                    {isGuest ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <input
                                 className="border p-2 rounded text-sm w-full"
@@ -176,15 +205,26 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
                                 onChange={e => setAddress({ ...address, addressText: e.target.value })}
                             />
                         </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <h3 className="text-sm sm:text-base font-medium">انتخاب آدرس</h3>
+                            {savedAddresses.map(addr => (
+                                <label key={addr.id} className="flex items-center gap-2 text-sm sm:text-base border rounded p-3">
+                                    <input
+                                        type="radio"
+                                        name="address"
+                                        checked={address.id === addr.id}
+                                        onChange={() => selectAddress(addr)}
+                                    />
+                                    <div>
+                                        <div>{addr.fullName}</div>
+                                        <div className="text-gray-500">{addr.phone}</div>
+                                        <div className="text-gray-500">{addr.addressText}</div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
                     )}
-                    <div className="mt-3 border h-50 flex justify-center items-center rounded">
-                        <button
-                            className="flex items-center gap-2 text-sm sm:text-base text-blue-600 underline"
-                            onClick={() => alert('نمایش نقشه برای انتخاب موقعیت')}
-                        >
-                            انتخاب موقعیت از روی نقشه
-                        </button>
-                    </div>
                 </section>
 
                 {/* Shipping Method */}
