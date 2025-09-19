@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ChatBubbleLeftRightIcon, PlusIcon, MinusIcon, CreditCardIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, PlusIcon, MinusIcon, CreditCardIcon, MegaphoneIcon } from '@heroicons/react/24/outline';
 
 type CartItem = {
     id: string;
@@ -54,8 +54,12 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
         },
     ]);
 
-    const [address, setAddress] = useState({ fullName: '', phone: '', addressText: '' });
-    const [shippingMethod, setShippingMethod] = useState('standard');
+    const [address, setAddress] = useState({ fullName: '', phone: '', addressText: '', id: '' });
+    const [isGuest, setIsGuest] = useState(true);
+    const [shippingMethod, setShippingMethod] = useState('post');
+    const [deliveryDate, setDeliveryDate] = useState('');
+    const [deliveryTime, setDeliveryTime] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('saman');
     const [discountCode, setDiscountCode] = useState('');
     const [showChat, setShowChat] = useState(false);
 
@@ -64,14 +68,19 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
     };
 
     const subtotal = items.reduce((s, it) => s + it.price * it.qty - (it.discount || 0), 0);
-    const shipping = shippingMethod === 'express' ? 50000 : 20000;
+    const shippingCosts = {
+        post: 20000,
+        courier: 50000,
+        tipax: 35000,
+    };
+    const shipping = shippingCosts[shippingMethod as keyof typeof shippingCosts];
     const tax = Math.round(subtotal * 0.09);
     const discountValue = discountCode === 'CHECK10' ? Math.round(subtotal * 0.1) : 0;
     const total = subtotal + shipping + tax - discountValue;
 
     useEffect(() => {
         onSummaryUpdate({ subtotal, shipping, tax, total });
-    }, [subtotal, shipping, tax, total, onSummaryUpdate]);
+    }, [subtotal, shipping, tax, total]);
 
     return (
         <div className="p-4 sm:p-6">
@@ -88,7 +97,10 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
                                     <img src={item.image} alt={item.title} className="object-contain max-h-16 sm:max-h-24" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-sm sm:text-base font-semibold">{item.title}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <MegaphoneIcon className="w-4 sm:w-5 h-4 sm:h-5 text-gray-600" />
+                                        <h3 className="text-sm sm:text-base font-semibold">{item.title}</h3>
+                                    </div>
                                     <p className="text-xs sm:text-sm text-gray-500">{item.color} • فروشنده: {item.seller}</p>
                                     <ul className="text-xs sm:text-sm text-gray-500 mt-2">
                                         {item.deliveryTags?.map((t, i) => (
@@ -106,7 +118,7 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
                                             <PlusIcon className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-center w-full">
                                         <div className="text-xs sm:text-sm text-gray-500">قیمت واحد</div>
                                         <div className="font-medium text-sm sm:text-lg">{currency(item.price)}</div>
                                         {item.discount ? <div className="text-xs sm:text-sm text-rose-600">تخفیف {currency(item.discount)}</div> : null}
@@ -123,87 +135,156 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
                 {/* Address Form */}
                 <section className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
                     <h2 className="text-base sm:text-lg font-medium mb-3">آدرس ارسال</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 mb-3 text-sm sm:text-base">
                         <input
-                            className="border p-2 rounded text-sm w-full"
-                            placeholder="نام و نام خانوادگی"
-                            value={address.fullName}
-                            onChange={e => setAddress({ ...address, fullName: e.target.value })}
+                            type="checkbox"
+                            checked={isGuest}
+                            onChange={() => setIsGuest(!isGuest)}
                         />
-                        <input
-                            className="border p-2 rounded text-sm w-full"
-                            placeholder="شماره تماس"
-                            value={address.phone}
-                            onChange={e => setAddress({ ...address, phone: e.target.value })}
-                        />
+                        <span>خرید به عنوان مهمان</span>
+                    </label>
+                    {isGuest && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input
+                                className="border p-2 rounded text-sm w-full"
+                                placeholder="نام"
+                                value={address.fullName.split(' ')[0] || ''}
+                                onChange={e => setAddress({ ...address, fullName: e.target.value + ' ' + (address.fullName.split(' ')[1] || '') })}
+                            />
+                            <input
+                                className="border p-2 rounded text-sm w-full"
+                                placeholder="نام خانوادگی"
+                                value={address.fullName.split(' ')[1] || ''}
+                                onChange={e => setAddress({ ...address, fullName: (address.fullName.split(' ')[0] || '') + ' ' + e.target.value })}
+                            />
+                            <input
+                                className="border p-2 rounded text-sm w-full"
+                                placeholder="شماره تماس"
+                                value={address.phone}
+                                onChange={e => setAddress({ ...address, phone: e.target.value })}
+                            />
+                            <input
+                                className="border p-2 rounded text-sm w-full"
+                                placeholder="کد ملی"
+                                value={address.id}
+                                onChange={e => setAddress({ ...address, id: e.target.value })}
+                            />
+                            <input
+                                className="border p-2 rounded text-sm w-full sm:col-span-2"
+                                placeholder="آدرس کامل"
+                                value={address.addressText}
+                                onChange={e => setAddress({ ...address, addressText: e.target.value })}
+                            />
+                        </div>
+                    )}
+                    <div className="mt-3 border h-50 flex justify-center items-center rounded">
+                        <button
+                            className="flex items-center gap-2 text-sm sm:text-base text-blue-600 underline"
+                            onClick={() => alert('نمایش نقشه برای انتخاب موقعیت')}
+                        >
+                            انتخاب موقعیت از روی نقشه
+                        </button>
                     </div>
-                    <textarea
-                        className="border mt-3 p-2 rounded w-full text-sm"
-                        placeholder="آدرس کامل"
-                        value={address.addressText}
-                        onChange={e => setAddress({ ...address, addressText: e.target.value })}
-                    />
-                    <div className="mt-3 text-xs sm:text-sm text-gray-500">فرض شده که امکان انتخاب موقعیت مکانی هم وجود دارد (آیکون نقشه).</div>
                 </section>
 
                 {/* Shipping Method */}
                 <section className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
-                    <h2 className="text-base sm:text-lg font-medium mb-3">روش ارسال و زمان تقریبی</h2>
-                    <div className="flex flex-col gap-2">
-                        <label className="flex items-center gap-2 text-sm sm:text-base">
-                            <input type="radio" name="shipping" checked={shippingMethod === 'standard'} onChange={() => setShippingMethod('standard')} />
-                            <div className="flex-1">ارسال استاندارد — تحویل ۲-۴ روز</div>
-                            <div className="font-medium">{currency(20000)}</div>
-                        </label>
-                        <label className="flex items-center gap-2 text-sm sm:text-base">
-                            <input type="radio" name="shipping" checked={shippingMethod === 'express'} onChange={() => setShippingMethod('express')} />
-                            <div className="flex-1">ارسال فوری — تحویل امروز/فردا</div>
-                            <div className="font-medium">{currency(50000)}</div>
-                        </label>
+                    <h2 className="text-base sm:text-lg font-medium mb-3">روش ارسال و زمان تحویل</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Shipping Options */}
+                        <div className="flex flex-col justify-center gap-2">
+                            <label className="flex items-center gap-2 text-sm sm:text-base">
+                                <input
+                                    type="radio"
+                                    name="shipping"
+                                    checked={shippingMethod === 'post'}
+                                    onChange={() => setShippingMethod('post')}
+                                />
+                                <div className="flex-1">پست — تحویل ۳-۵ روز</div>
+                                <div className="font-medium">{currency(20000)}</div>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm sm:text-base">
+                                <input
+                                    type="radio"
+                                    name="shipping"
+                                    checked={shippingMethod === 'courier'}
+                                    onChange={() => setShippingMethod('courier')}
+                                />
+                                <div className="flex-1">پیک — تحویل امروز/فردا</div>
+                                <div className="font-medium">{currency(50000)}</div>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm sm:text-base">
+                                <input
+                                    type="radio"
+                                    name="shipping"
+                                    checked={shippingMethod === 'tipax'}
+                                    onChange={() => setShippingMethod('tipax')}
+                                />
+                                <div className="flex-1">تیپاکس — تحویل ۲-۴ روز</div>
+                                <div className="font-medium">{currency(35000)}</div>
+                            </label>
+                        </div>
+                        {/* Delivery Date and Time */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm sm:text-base">تاریخ تحویل</label>
+                            <input
+                                type="date"
+                                className="border p-2 rounded text-sm w-full"
+                                value={deliveryDate}
+                                onChange={e => setDeliveryDate(e.target.value)}
+                            />
+                            <label className="text-sm sm:text-base mt-2">ساعت تحویل</label>
+                            <select
+                                className="border p-2 rounded text-sm w-full"
+                                value={deliveryTime}
+                                onChange={e => setDeliveryTime(e.target.value)}
+                            >
+                                <option value="">انتخاب کنید</option>
+                                <option value="9-12">۹:۰۰ - ۱۲:۰۰</option>
+                                <option value="12-15">۱۲:۰۰ - ۱۵:۰۰</option>
+                                <option value="15-18">۱۵:۰۰ - ۱۸:۰۰</option>
+                                <option value="18-21">۱۸:۰۰ - ۲۱:۰۰</option>
+                            </select>
+                        </div>
                     </div>
                 </section>
 
                 {/* Payment Method */}
                 <section className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
                     <h2 className="text-base sm:text-lg font-medium mb-3">روش پرداخت</h2>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-sm sm:text-base">
+                    <div className="flex justify-around gap-2 text-sm sm:text-base">
                         <label className="flex items-center gap-2">
-                            <input type="radio" name="pay" defaultChecked />
-                            <span>پرداخت اینترنتی</span>
+                            <input
+                                type="radio"
+                                name="payment"
+                                checked={paymentMethod === 'saman'}
+                                onChange={() => setPaymentMethod('saman')}
+                            />
+                            <span>بانک سامان</span>
                         </label>
                         <label className="flex items-center gap-2">
-                            <input type="radio" name="pay" />
-                            <span>پرداخت در محل</span>
+                            <input
+                                type="radio"
+                                name="payment"
+                                checked={paymentMethod === 'snappay'}
+                                onChange={() => setPaymentMethod('snappay')}
+                            />
+                            <span>اسنپ پی</span>
                         </label>
-                    </div>
-                    <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                        <input
-                            value={discountCode}
-                            onChange={e => setDiscountCode(e.target.value)}
-                            placeholder="کد تخفیف"
-                            className="border p-2 rounded flex-1 text-sm w-full"
-                        />
-                        <button onClick={() => alert('اعمال کد')} className="px-3 py-2 bg-gray-100 rounded text-sm sm:text-base">
-                            اعمال
-                        </button>
-                    </div>
-                    <div className="mt-3 flex flex-col sm:flex-row justify-between gap-2">
-                        <button
-                            className="flex items-center gap-2 text-xs sm:text-sm underline"
-                            onClick={() => setShowChat(true)}
-                        >
-                            <ChatBubbleLeftRightIcon className="w-4 sm:w-5 h-4 sm:h-5" />
-                            پشتیبانی فوری
-                        </button>
-                        <div className="text-right">
-                            <div className="text-xs sm:text-sm text-gray-500">جمع جزئی</div>
-                            <div className="font-semibold text-sm sm:text-lg">{currency(subtotal)}</div>
-                        </div>
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="payment"
+                                checked={paymentMethod === 'mellat'}
+                                onChange={() => setPaymentMethod('mellat')}
+                            />
+                            <span>بانک ملت</span>
+                        </label>
                     </div>
                 </section>
 
-                {/* Summary Card */}
-                <aside className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
+                {/* Summary, Discount, and Final Payment */}
+                <section className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
                     <h3 className="text-base sm:text-lg font-medium mb-3">خلاصه پرداخت</h3>
                     <div className="space-y-2 text-gray-600 text-sm sm:text-base">
                         <div className="flex justify-between">
@@ -221,32 +302,46 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
                         {discountValue > 0 && (
                             <div className="flex justify-between text-rose-600">
                                 <span>تخفیف</span>
-                                <span>-{currency(discountValue)}</span>
+                                <span>{currency(discountValue)}-</span>
                             </div>
                         )}
-                        <div className="border-t mt-3 pt-3 flex justify-between items-center">
-                            <div>
-                                <div className="text-xs sm:text-sm text-gray-500">مبلغ قابل پرداخت</div>
-                                <div className="text-lg sm:text-xl font-bold">{currency(total)}</div>
-                            </div>
-                            <button
-                                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2 text-sm sm:text-base"
-                                onClick={() => alert('پرداخت آزمایشی')}
-                            >
-                                <CreditCardIcon className="w-4 sm:w-5 h-4 sm:h-5" />
-                                پرداخت
-                            </button>
+                    </div>
+                    <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                        <input
+                            value={discountCode}
+                            onChange={e => setDiscountCode(e.target.value)}
+                            placeholder="کد تخفیف"
+                            className="border p-2 rounded flex-1 text-sm w-full"
+                        />
+                        <button onClick={() => alert('اعمال کد')} className="px-3 py-2 bg-gray-100 rounded text-sm sm:text-base">
+                            اعمال
+                        </button>
+                    </div>
+                    <div className="border-t mt-3 pt-3 flex flex-col sm:flex-row justify-between items-center gap-2">
+                        <div>
+                            <div className="text-xs sm:text-sm text-gray-500">مبلغ قابل پرداخت</div>
+                            <div className="text-lg sm:text-xl font-bold">{currency(total)}</div>
                         </div>
+                        <button
+                            className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+                            onClick={() => alert('پرداخت نهایی')}
+                        >
+                            <CreditCardIcon className="w-4 sm:w-5 h-4 sm:h-5" />
+                            پرداخت نهایی
+                        </button>
                     </div>
-                    <div className="mt-4 sm:mt-6">
-                        <h4 className="text-sm sm:text-base font-medium mb-2">چک‌لیست آماده‌سازی</h4>
-                        <ul className="text-xs sm:text-sm text-gray-600 list-disc pr-5">
-                            <li>آدرس وارد شده تایید شده باشد</li>
-                            <li>موجودی و قفل پرداخت تست شود</li>
-                            <li>درگاه آزمایشی متصل</li>
-                        </ul>
-                    </div>
-                </aside>
+                </section>
+
+                {/* Chat Button */}
+                <div className="flex justify-start">
+                    <button
+                        className="flex items-center gap-2 text-xs sm:text-sm underline"
+                        onClick={() => setShowChat(true)}
+                    >
+                        <ChatBubbleLeftRightIcon className="w-4 sm:w-5 h-4 sm:h-5" />
+                        پشتیبانی
+                    </button>
+                </div>
             </div>
 
             {/* Chat Modal */}
@@ -275,3 +370,4 @@ export default function CheckPayCart({ onSummaryUpdate }: CheckPayCartProps) {
         </div>
     );
 }
+

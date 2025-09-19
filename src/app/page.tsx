@@ -48,7 +48,7 @@ export default function CheckoutPage() {
           </section>
 
           {/* Summary Section */}
-          <aside className="bg-white p-4 sm:p-6 rounded-2xl shadow-md">
+          <aside className="bg-white p-4 sm:p-6 rounded-2xl shadow-md lg:sticky lg:top-4 h-fit">
             <h2 className="text-base sm:text-lg font-semibold mb-4 text-gray-700">خلاصه سفارش</h2>
             <div className="space-y-3 text-gray-600 text-sm sm:text-base">
               <div className="flex justify-between">
